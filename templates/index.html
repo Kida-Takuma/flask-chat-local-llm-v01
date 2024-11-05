@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #121212;
+            font-family: Arial, sans-serif;
+            color: #FFFFFF;
+        }
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            background-color: #121212;
+        }
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            white-space: pre-wrap;
+            position: relative;
+            color: #FFFFFF;
+        }
+        .user {
+            align-self: flex-end;
+            background-color: #2E7D32;
+        }
+        .assistant {
+            align-self: flex-start;
+            background-color: #333333;
+        }
+        .user::after, .assistant::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        .user::after {
+            border-width: 10px 0 10px 10px;
+            border-color: transparent transparent transparent #2E7D32;
+            right: -10px;
+            top: 10px;
+        }
+        .assistant::after {
+            border-width: 10px 10px 10px 0;
+            border-color: transparent #333333 transparent transparent;
+            left: -10px;
+            top: 10px;
+        }
+        #input-section {
+            display: flex;
+            padding: 10px;
+            background-color: #1F1F1F;
+            border-top: 1px solid #333333;
+        }
+        #input-box {
+            flex: 1;
+            padding: 10px;
+            background-color: #333333;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 20px;
+        }
+        #send-button {
+            margin-left: 10px;
+            padding: 10px 15px;
+            background-color: #0078FF;
+            border: none;
+            color: white;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        pre {
+            background-color: #212121;
+            color: #e0e0e0;
+            padding: 10px;
+            border-radius: 10px;
+            position: relative;
+        }
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container"></div>
+    <div id="input-section">
+        <input id="input-box" type="text" placeholder="メッセージを入力してください">
+        <button id="send-button" onclick="sendMessage()">送信</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        async function sendMessage() {
+            const inputBox = document.getElementById('input-box');
+            const message = inputBox.value.trim();
+            if (!message) return;
+
+            addMessageToChat('user', message);
+            inputBox.value = ''; 
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessageToChat('assistant', data.assistant_message);
+                } else {
+                    console.error('サーバーからエラーが返されました');
+                }
+            } catch (error) {
+                console.error('メッセージ送信中にエラーが発生しました:', error);
+            }
+        }
+
+        function addMessageToChat(role, message) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.innerHTML = marked.parse(message);
+
+            messageDiv.querySelectorAll('pre').forEach((block) => {
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copy-button';
+                copyButton.innerText = 'Copy';
+                copyButton.onclick = () => {
+                    navigator.clipboard.writeText(block.innerText);
+                    copyButton.innerText = 'Copied!';
+                    setTimeout(() => copyButton.innerText = 'Copy', 2000);
+                };
+                block.appendChild(copyButton);
+            });
+
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
